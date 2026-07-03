@@ -168,7 +168,7 @@ export const connect = Effect.fnUntraced(function* (
     }
     if (!URL.canParse(config.url)) return yield* new ConnectError({ server, message: `Invalid MCP URL for "${server}"` })
     return new StreamableHTTPClientTransport(new URL(config.url), {
-      requestInit: config.headers ? { headers: config.headers } : undefined,
+      requestInit: config.headers ? { headers: resolveHeaders(config.headers) } : undefined,
       authProvider,
     })
   })
@@ -381,6 +381,15 @@ const childPids = (pid: number) =>
         })
       }),
   )
+
+export function resolveHeaders(headers: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [
+      key,
+      value.replaceAll(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, (_match, name: string) => process.env[name] ?? ""),
+    ]),
+  )
+}
 
 async function paginate<R extends { nextCursor?: string }, T>(
   list: (cursor: string | undefined) => Promise<R>,
